@@ -15,9 +15,12 @@
     "@nivo/circle-packing": "~0.67",
     "react-scripts": "3.3.0"
   },
+  "devDependencies":{
+    "cross-env": "~7.0"
+  },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "cross-env CI= react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

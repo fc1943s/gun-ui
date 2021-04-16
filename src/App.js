@@ -17,12 +17,13 @@ const MyResponsiveBubble = ({ root /* see root tab */ }) => (
     root={root}
     margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
     identity="name"
+    colorBy="depth"
     label={(d) => d.data.label}
     value="loc"
-    colors={{ scheme: 'paired' }}
+    colors={{ scheme: 'spectral' }}
     padding={0}
     labelSkipRadius={0}
-    labelTextColor={{ from: 'color', modifiers: [['darker', 0.8]] }}
+    labelTextColor="black"
     borderWidth={2}
     borderColor={{ from: 'color' }}
     defs={[
@@ -31,7 +32,7 @@ const MyResponsiveBubble = ({ root /* see root tab */ }) => (
         type: 'patternLines',
         background: 'none',
         color: 'inherit',
-        rotation: -45,
+        rotation: -75,
         lineWidth: 5,
         spacing: 8
       }
@@ -71,7 +72,7 @@ function App() {
     });
   }, [gun]);
 
-  const [valuesEnabled, setValuesEnabled] = useState(false);
+  const [valuesEnabled, setValuesEnabled] = useState(true);
 
   const toggleValues = () => {
     setValuesEnabled(!valuesEnabled);
@@ -426,7 +427,7 @@ const getRootData = (graph, valuesEnabled) => {
           label: innerNode,
           label2: innerNode,
           // color: `hsl(${Math.round(255 * Math.random())}, 70%, 50%)`,
-          loc: 5
+          loc: 15
         }
         currObj.children = [...currObj.children || [], x];
         currObj = x;
@@ -434,15 +435,18 @@ const getRootData = (graph, valuesEnabled) => {
         currObj = currCurrObj;
       }
 
+      const valueOn = 3;
+      const valueOff = 0.3;
+
       if (i === innerNodes.length - 1) {
         const propsText = JSON.stringify(node.props, null, 4).replace(/\\/g, "");
 
         currObj.fullPath = node.id;
         currObj.label2 = innerNode;
-        currObj.label = !valuesEnabled ? `${innerNodes[i - 1]}/${innerNode}` : propsText;
-        currObj.name = `${node.id}\r\n\r\n props=${propsText}`;
+        currObj.name = `${node.id}\r\n\r\n | ${propsText}`;
+        currObj.label = !valuesEnabled ? `${innerNodes[i - 1]}/${innerNode}` : currObj.name;
         // currObj.color = `hsl(${Math.round(255 * Math.random())}, 70%, 50%)`;
-        currObj.loc = Object.keys(node.props).length > 0 ? 3 : 1;
+        currObj.loc = Object.keys(node.props).length > 0 ? valueOn : valueOff;
         // currObj.children = currObj.loc !== 3 ? currObj.children : [
         //   {
         //     fullPath: node.id,
@@ -458,16 +462,16 @@ const getRootData = (graph, valuesEnabled) => {
               fullPath: node.id,
               name: innerNode,
               label: innerNode,
-              loc: 1
+              loc: valueOff
             }
           ]
         }
       }
 
       if ((currObj.children || []).length > 1
-        && currObj.children.find((x) => x.loc === 3)
-        && !currObj.children.find((x) => x.loc === 1 && (x.children || []).length > 0)) {
-        currObj.children = currObj.children.filter((x) => x.loc !== 1)
+        && currObj.children.find((x) => x.loc === valueOn)
+        && !currObj.children.find((x) => x.loc === valueOff && (x.children || []).length > 0)) {
+        currObj.children = currObj.children.filter((x) => x.loc !== valueOff)
       }
     }
   }

@@ -3,6 +3,10 @@
   height: 100%;
 }
 
+g text {
+  transform: rotate(4deg);
+}
+
 body {
   margin: 0;
 }

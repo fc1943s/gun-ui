@@ -357,7 +357,7 @@ function App() {
   window.graph = graph;
 
   return (
-    <div className="App">
+    <div className="App" style={{ 'padding-top': '2000px' }}>
       <h1>GunDB Overview</h1>
       <label>Endpoint</label>
       <br />
@@ -408,7 +408,15 @@ const getRootData = (graph, valuesEnabled) => {
     loc: 1
   };
 
-  for (const node of graph.nodes) {
+  const nodes = graph.nodes.map((node) => {
+    return Object.keys(node.props).map((prop) => ({
+      id: `${node.id}/${prop}`,
+      props: node.props[prop]
+    }))
+  }).reduce((a, b) => [...a, ...b]);
+  // console.log('nodes', nodes);
+
+  for (const node of nodes) {
     const innerNodes = node.id.split("/");
 
     let currObj = newGraph;
@@ -426,7 +434,6 @@ const getRootData = (graph, valuesEnabled) => {
           name: innerNode,
           label: innerNode,
           label2: innerNode,
-          // color: `hsl(${Math.round(255 * Math.random())}, 70%, 50%)`,
           loc: 15
         }
         currObj.children = [...currObj.children || [], x];
@@ -443,18 +450,17 @@ const getRootData = (graph, valuesEnabled) => {
 
         currObj.fullPath = node.id;
         currObj.label2 = innerNode;
-        currObj.name = `${node.id}\r\n\r\n | ${propsText}`;
+        currObj.name = `${node.id}\r\n\r\n${propsText}`;
+        // currObj.name = {a:1,b:2};
         currObj.label = !valuesEnabled ? `${innerNodes[i - 1]}/${innerNode}` : currObj.name;
         // currObj.color = `hsl(${Math.round(255 * Math.random())}, 70%, 50%)`;
         currObj.loc = Object.keys(node.props).length > 0 ? valueOn : valueOff;
-        // currObj.children = currObj.loc !== 3 ? currObj.children : [
-        //   {
-        //     fullPath: node.id,
-        //     name: innerNode,
-        //     label: propsText,
-        //     loc: 3
-        //   }
-        // ]
+        // currObj.children = currObj.loc === valueOff ? [] : Object.keys(node.props).map((key) => ({
+        //     fullPath: node.id + "key",
+        //     name: key,
+        //     label: node.props[key],
+        //     loc: valueOn
+        //   }))
       } else {
         if (!currObj.children) {
           currObj.children = [
@@ -477,6 +483,6 @@ const getRootData = (graph, valuesEnabled) => {
   }
 
   return newGraph;
-};
+}
 
 export default App;

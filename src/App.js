@@ -61,7 +61,7 @@ function App() {
 
   const [endpoint, setEndpoint] = useState('http://localhost:8765/gun');
 
-  const [root, setRoot] = useState('Fluke');
+  const [root, setRoot] = useState('GunRecoil');
 
   const [gun, setGun] = useState(new Gun());
 
@@ -357,7 +357,7 @@ function App() {
   window.graph = graph;
 
   return (
-    <div className="App" style={{ 'padding-top': '2000px' }}>
+    <div className="App" style={{ 'padding-top': '600px' }}>
       <h1>GunDB Overview</h1>
       <label>Endpoint</label>
       <br />

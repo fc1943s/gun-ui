@@ -62,6 +62,7 @@ function App() {
   const [endpoint, setEndpoint] = useState('http://localhost:8765/gun');
 
   const [root, setRoot] = useState('GunRecoil');
+  const [search, setSearch] = useState('');
 
   const [gun, setGun] = useState(new Gun());
 
@@ -358,9 +359,7 @@ function App() {
 
   return (
     <div className="App" style={{ 'padding-top': '600px' }}>
-      <h1>GunDB Overview</h1>
-      <label>Endpoint</label>
-      <br />
+      <label>Endpoint </label>
       <input
         value={endpoint}
         onChange={(ev) => {
@@ -369,12 +368,20 @@ function App() {
         type="text"
       />
       <br />
-      <label>Root</label>
-      <br />
+      <label>Root </label>
       <input
         value={root}
         onChange={(ev) => {
           setRoot(ev.target.value);
+        }}
+        type="text"
+      />
+      <br />
+      <label>Search </label>
+      <input
+        value={search}
+        onChange={(ev) => {
+          setSearch(ev.target.value);
         }}
         type="text"
       />
@@ -387,7 +394,7 @@ function App() {
       <button onClick={() => toggleValues()}>Toggle Values</button>
 
       <div style={{ height: "1100px", color: "black" }}>
-        <MyResponsiveBubble root={getRootData(graph, valuesEnabled)} />
+        <MyResponsiveBubble root={getRootData(graph, valuesEnabled, search)} />
       </div>
 
       {/*<div style={windowStyle}>*/}
@@ -400,7 +407,7 @@ function App() {
   );
 }
 
-const getRootData = (graph, valuesEnabled) => {
+const getRootData = (graph, valuesEnabled, search) => {
   const newGraph = {
     "name": "root",
     label: 'root',
@@ -413,19 +420,23 @@ const getRootData = (graph, valuesEnabled) => {
       id: `${node.id}/${prop}`,
       props: node.props[prop]
     }))
-  }).reduce((a, b) => [...a, ...b]);
+  }).reduce((a, b) => [...a, ...b])
+    ;
   // console.log('nodes', nodes);
 
-  for (const node of nodes) {
+  nodes.sort((a, b) => a.id.localeCompare(b.id));
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
     const innerNodes = node.id.split("/");
 
     let currObj = newGraph;
-    for (let i = 0; i < innerNodes.length; i++) {
-      const innerNode = innerNodes[i];
+    for (let j = 0; j < innerNodes.length; j++) {
+      const innerNode = innerNodes[j];
 
       let currCurrObj = (currObj.children || []).find((x) => x.label2 === innerNode)
 
-      if (i === innerNodes.length - 1) {
+      if (j === innerNodes.length - 1) {
       }
 
       if (!currCurrObj) {
@@ -445,14 +456,15 @@ const getRootData = (graph, valuesEnabled) => {
       const valueOn = 3;
       const valueOff = 0.3;
 
-      if (i === innerNodes.length - 1) {
+      if (j === innerNodes.length - 1) {
         const propsText = JSON.stringify(node.props, null, 4).replace(/\\/g, "");
 
         currObj.fullPath = node.id;
         currObj.label2 = innerNode;
         currObj.name = `${node.id}\r\n\r\n${propsText}`;
         // currObj.name = {a:1,b:2};
-        currObj.label = !valuesEnabled ? `${innerNodes[i - 1]}/${innerNode}` : currObj.name;
+        currObj.label = !valuesEnabled ? `${innerNode}${("/" + innerNodes[j - 1])}` : currObj.name;
+        currObj.label = search === '' ? currObj.label : (currObj.name.indexOf(search) >= 0 ? currObj.label : '');
         // currObj.color = `hsl(${Math.round(255 * Math.random())}, 70%, 50%)`;
         currObj.loc = Object.keys(node.props || {}).length > 0 ? valueOn : valueOff;
         // currObj.children = currObj.loc === valueOff ? [] : Object.keys(node.props).map((key) => ({

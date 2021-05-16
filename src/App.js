@@ -386,7 +386,7 @@ function App() {
 
       <button onClick={() => toggleValues()}>Toggle Values</button>
 
-      <div style={{ height: "1100px" }}>
+      <div style={{ height: "1100px", color: "black" }}>
         <MyResponsiveBubble root={getRootData(graph, valuesEnabled)} />
       </div>
 

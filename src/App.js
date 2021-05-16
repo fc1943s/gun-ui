@@ -454,7 +454,7 @@ const getRootData = (graph, valuesEnabled) => {
         // currObj.name = {a:1,b:2};
         currObj.label = !valuesEnabled ? `${innerNodes[i - 1]}/${innerNode}` : currObj.name;
         // currObj.color = `hsl(${Math.round(255 * Math.random())}, 70%, 50%)`;
-        currObj.loc = Object.keys(node.props).length > 0 ? valueOn : valueOff;
+        currObj.loc = Object.keys(node.props || {}).length > 0 ? valueOn : valueOff;
         // currObj.children = currObj.loc === valueOff ? [] : Object.keys(node.props).map((key) => ({
         //     fullPath: node.id + "key",
         //     name: key,

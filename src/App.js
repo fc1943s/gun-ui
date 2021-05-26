@@ -1,25 +1,39 @@
 import './App.css';
 
 import Gun from 'gun';
+import 'gun/sea';
 import React, { useEffect, useState } from 'react';
-import { Graph } from 'react-d3-graph';
 
-import Vertex from './Vertex';
+// import Vertex from './Vertex';
 
-import { ResponsiveBubble } from '@nivo/circle-packing'
+import { ResponsiveCirclePacking } from '@nivo/circle-packing'
+
+
+function log (...p) {
+  if(window.log) {
+    console.log(...p);
+  }
+}
 // make sure parent container have a defined height when using
 // responsive component, otherwise height will be 0 and
 // no chart will be rendered.
 // website examples showcase many properties,
 // you'll often use just a few of them.
-const MyResponsiveBubble = ({ root /* see root tab */ }) => (
-  <ResponsiveBubble
-    root={root}
+const MyResponsiveBubble = ({ root /* see root tab */ }) => {
+  const [zoomedId, setZoomedId] = useState(null);
+  return (
+  <ResponsiveCirclePacking
+    data={root}
     margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-    identity="name"
+    id="fullPath"
     colorBy="depth"
-    label={(d) => d.data.label}
+    label={x => x.data.label}
+    enableLabels={true}
     value="loc"
+    zoomedId={zoomedId}
+    onClick={node => {
+      setZoomedId(zoomedId === node.id ? null : node.id)
+    }}
     colors={{ scheme: 'spectral' }}
     padding={0}
     labelSkipRadius={0}
@@ -42,7 +56,7 @@ const MyResponsiveBubble = ({ root /* see root tab */ }) => (
     motionStiffness={90}
     motionDamping={12}
   />
-)
+)}
 
 
 // const gun = new Gun('http://192.168.178.64:8765/gun');
@@ -52,6 +66,24 @@ let gunListeners = new Set();
 
 const vertices = [{ id: 'gun', props: { root: '' } }];
 const edges = [];
+
+// const sleep = async (ms) => {
+//   return new Promise((resolve, _reject) => {
+//     setTimeout(() => {
+//       resolve();
+//     }, ms);
+//   });
+// };
+
+const authUser = (user, username, password) => {
+  return new Promise((resolve, reject) => {
+    try {
+      user.auth(username, password, resolve)
+    } catch (e) {
+      reject(e)
+    }
+  });
+};
 
 function App() {
   const [graph, setGraph] = useState({
@@ -63,35 +95,57 @@ function App() {
 
   const [root, setRoot] = useState('GunRecoil');
   const [search, setSearch] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const [gun, setGun] = useState(new Gun());
 
   useEffect(() => {
+    (async () => {
+      if (username.length > 0 && password.length > 0) {
+        const ack = await authUser(gun.user(), username, password);
+        log('ack', ack);
+      }
+    })()
+  }, [gun, username, password]);
+
+  const getGunRoot = React.useCallback(() => {
+    let currentReference = gun;
+    if (username.length > 0 && password.length > 0) {
+      currentReference = gun.user();
+    }
+    return currentReference;
+  }, [gun, username, password]);
+
+
+  useEffect(() => {
     gunListeners.forEach((soul) => {
-      gun.get(soul).off();
+      const gunRoot = getGunRoot();
+      gunRoot.get(soul).off();
       gunListeners.delete(soul);
     });
-  }, [gun]);
+  }, [gun, getGunRoot]);
 
   const [valuesEnabled, setValuesEnabled] = useState(true);
 
-  const toggleValues = () => {
+  const toggleValues = React.useCallback(() => {
     setValuesEnabled(!valuesEnabled);
-  }
+  }, [setValuesEnabled, valuesEnabled]);
 
-  const loadEndpoint = () => {
-    setGun(new Gun(endpoint));
-    setGraph((graph) => {
+  const loadEndpoint = React.useCallback(() => {
+    const newGun = new Gun(endpoint);
+    setGun(newGun);
+    setGraph((_graph) => {
       return {
         nodes: vertices,
         links: edges,
       };
     });
-    window.gun = gun;
-  };
+    window.gun = newGun;
+  }, [setGun, setGraph, endpoint]);
 
   useEffect(() => {
-    console.log(
+    log(
       `Peers set to: ${
         Object.keys(gun._.opt.peers).length > 0
           ? Object.keys(gun._.opt.peers).reduce(
@@ -102,57 +156,27 @@ function App() {
     );
   }, [gun]);
 
-  const getPath = (path) => {
-    let currentReference = gun;
+  const getPath = React.useCallback((path) => {
+    let currentReference = getGunRoot();
+
     for (let i = 0; i < path.length; i++) {
+      log('currentReference', path, currentReference, 'next:', path[i]);
       currentReference = currentReference.get(path[i]);
     }
     return currentReference;
-  };
+  }, [getGunRoot]);
 
-  const resetGraph = () => {
+  const resetGraph = React.useCallback(() => {
     setGraph(() => {
       return {
         nodes: vertices,
         links: edges,
       };
     });
-  };
+  }, [setGraph]);
 
-  const insertDataFromGun = async (path, parentId) => {
-    resetGraph();
-    const graph = await getDataFromGun(path, parentId);
-
-    console.log(graph.vertices);
-    console.log(graph.edges);
-
-    setGraph(() => {
-      return {
-        nodes: graph.vertices || vertices,
-        links: graph.edges || edges,
-      };
-    });
-    removeUnreferencedNode('gun');
-  };
-
-  const addGunListener = (soul) => {
-    if (!gunListeners.has(soul)) {
-      console.log('Added listener to node: ' + soul);
-      gun.get(soul).on(handleNodeChange, { change: true });
-      gunListeners.add(soul);
-    }
-  };
-
-  const removeUnreferencedNode = (soul) => {
-    console.log(`Removing unreferenced Nodes`);
-    const index = graph.links.findIndex((edge) => edge.target === soul);
-    console.log(`Node still referenced?: ${index === -1 ? 'No' : 'Yes'}`);
-    if (index === -1) {
-      removeNode(soul);
-    }
-  };
-
-  const removeNode = (soul) => {
+  const removeNode = React.useCallback((soul) => {
+    let gun = getGunRoot();
     gun.get(soul).off();
     setGraph((data) => {
       let nodes = data.nodes;
@@ -162,23 +186,34 @@ function App() {
         );
         return data;
       }
-      console.log(`Searching node with soul: ${soul}`);
+      log(`Searching node with soul: ${soul}`);
       const nodeId = nodes.findIndex((node) => node.id === soul);
       if (nodeId === -1) {
         console.error(`No node found!`);
         return data;
       }
-      console.log(`Removing node at index: ${nodeId}`);
+      log(`Removing node at index: ${nodeId}`);
       nodes.splice(nodeId, 1);
       return { ...data, nodes: nodes };
     });
-  };
+  }, [getGunRoot]);
 
-  const handleNodeChange = (change) => {
+  const removeUnreferencedNode = React.useCallback((soul) => {
+    log(`Removing unreferenced Nodes`);
+    const index = graph.links.findIndex((edge) => edge.target === soul);
+    log(`Node still referenced?: ${index === -1 ? 'No' : 'Yes'}`);
+    if (index === -1) {
+      removeNode(soul);
+    }
+  }, [graph, removeNode]);
+
+  const addGunListenerRef = React.useRef(null);
+
+  const handleNodeChange = React.useCallback((change) => {
     setGraph((data) => {
       const id = change['_']['#'];
 
-      console.log(`Setting data of node: "${id}"`);
+      log(`Setting data of node: "${id}"`);
 
       if (!data) return data;
 
@@ -191,7 +226,7 @@ function App() {
         console.error('id not found');
         return data;
       }
-      console.log(`Found node with index: "${idx}"`);
+      log(`Found node with index: "${idx}"`);
 
       let newProps = {};
       let newVertices = [];
@@ -224,7 +259,7 @@ function App() {
             target: newNodeSoul,
             label: prop,
           });
-          addGunListener(newNodeSoul);
+          addGunListenerRef.current(newNodeSoul);
           // Remove old property from parent if it exists
           if (oldNodes[idx].props[prop] !== undefined) {
             propsToRemove.push(prop);
@@ -235,8 +270,8 @@ function App() {
         newProps[prop] = change[prop];
       }
 
-      console.log('Adding props');
-      console.log(newProps);
+      log('Adding props');
+      log(newProps);
 
       for (const p in oldNodes[idx]['props']) {
         if (!propsToRemove.includes(p) && newProps[p] === undefined) {
@@ -249,20 +284,39 @@ function App() {
       oldNodes.push(...newVertices);
       oldLinks.push(...newEdges);
 
-      console.log('New nodes');
-      console.log(oldNodes);
+      log('New nodes');
+      log(oldNodes);
 
       return {
         nodes: oldNodes,
         links: oldLinks,
       };
     });
-  };
+  }, [addGunListenerRef, removeUnreferencedNode]);
 
-  const getDataFromGun = async (path, parentId) => {
-    return new Promise(async (resolve, reject) => {
+  const addGunListener = React.useCallback((soul) => {
+    if (!gunListeners.has(soul)) {
+      log('Added listener to node: ' + soul);
+
+      let gun = getGunRoot();
+      gun.get(soul).on(handleNodeChange, { change: true });
+      gunListeners.add(soul);
+    }
+  }, [getGunRoot, handleNodeChange]);
+
+  React.useEffect(() => {
+    addGunListenerRef.current = addGunListener;
+  }, [addGunListener]);
+
+
+  const getDataFromGun = React.useCallback((path, parentId) => {
+    return new Promise(async (resolve, _reject) => {
       let graph = { vertices: [], edges: [] };
-      getPath(path).once(async (nodeProperties) => {
+      const gun = getGunRoot();
+      const node = await getPath(path);
+      log("node", node);
+
+      const process = async (nodeProperties) => {
         const soul = nodeProperties['_']['#'];
 
         addGunListener(soul);
@@ -312,49 +366,71 @@ function App() {
             label: path[path.length - 1],
           });
         }
-        console.log('Got Data from Graph:');
-        console.log(graph);
+        log('Got Data from Graph:');
+        log(graph);
 
         resolve(graph);
-      });
+      }
+      if (node['_']['#']) {
+        await process(node);
+      } else {
+        node.once(process);
+      }
     });
-  };
+  }, [getPath, addGunListener, getGunRoot]);
 
-  const graphConfig = {
-    width: 800,
-    height: 800,
-    directed: true,
-    nodeHighlightBehavior: true,
-    staticGraphWithDragAndDrop: false, // If false, can be removed
-    automaticRearrangeAfterDropNode: false, // If false, can be removed
-    node: {
-      renderLabel: false,
-      size: 1000,
-      viewGenerator: (node) => <Vertex node={node} />,
-    },
-    link: {
-      highlightColor: 'blue',
-      renderLabel: true,
-      highlightFontWeight: 'bold',
-      semanticStrokeWidth: true,
-      fontSize: 12,
-    },
-    d3: {
-      gravity: -1000,
-      linkLength: 50,
-    },
-  };
+  const insertDataFromGun = React.useCallback(async (path, parentId) => {
+    resetGraph();
+    const graph = await getDataFromGun(path, parentId);
 
-  const windowStyle = {
-    backgroundColor: '#282828',
-    padding: '2px',
-  };
+    log(graph.vertices);
+    log(graph.edges);
 
-  const graphStyle = {
-    backgroundColor: '#FFF',
-  };
+    setGraph(() => {
+      return {
+        nodes: graph.vertices || vertices,
+        links: graph.edges || edges,
+      };
+    });
+    removeUnreferencedNode('gun');
+  }, [setGraph, resetGraph, getDataFromGun, removeUnreferencedNode]);
 
-  console.log('graph:', graph);
+
+  // const _graphConfig = {
+  //   width: 800,
+  //   height: 800,
+  //   directed: true,
+  //   nodeHighlightBehavior: true,
+  //   staticGraphWithDragAndDrop: false, // If false, can be removed
+  //   automaticRearrangeAfterDropNode: false, // If false, can be removed
+  //   node: {
+  //     renderLabel: false,
+  //     size: 1000,
+  //     viewGenerator: (node) => <Vertex node={node} />,
+  //   },
+  //   link: {
+  //     highlightColor: 'blue',
+  //     renderLabel: true,
+  //     highlightFontWeight: 'bold',
+  //     semanticStrokeWidth: true,
+  //     fontSize: 12,
+  //   },
+  //   d3: {
+  //     gravity: -1000,
+  //     linkLength: 50,
+  //   },
+  // };
+
+  // const _windowStyle = {
+  //   backgroundColor: '#282828',
+  //   padding: '2px',
+  // };
+  //
+  // const _graphStyle = {
+  //   backgroundColor: '#FFF',
+  // };
+
+  log('graph:', graph);
   window.graph = graph;
 
   return (
@@ -367,7 +443,6 @@ function App() {
         }}
         type="text"
       />
-      <br />
       <label>Root </label>
       <input
         value={root}
@@ -376,7 +451,6 @@ function App() {
         }}
         type="text"
       />
-      <br />
       <label>Search </label>
       <input
         value={search}
@@ -384,6 +458,22 @@ function App() {
           setSearch(ev.target.value);
         }}
         type="text"
+      />
+      <label>Username </label>
+      <input
+        value={username}
+        onChange={(ev) => {
+          setUsername(ev.target.value);
+        }}
+        type="text"
+      />
+      <label>Password </label>
+      <input
+        value={password}
+        onChange={(ev) => {
+          setPassword(ev.target.value);
+        }}
+        type="password"
       />
       <br />
       <button onClick={() => insertDataFromGun([root], null)}>
@@ -415,14 +505,17 @@ const getRootData = (graph, valuesEnabled, search) => {
     loc: 1
   };
 
+  const user = window.gun ? window.gun.user().is : null;
+  let pub = user ? user.pub : '';
+
   const nodes = graph.nodes.map((node) => {
-    return Object.keys(node.props).map((prop) => ({
-      id: `${node.id}/${prop}`,
-      props: node.props[prop]
-    }))
-  }).reduce((a, b) => [...a, ...b])
-    ;
-  // console.log('nodes', nodes);
+      return Object.keys(node.props).map((prop) => ({
+        id: `${node.id.replace(pub, '')}/${prop}`,
+        props: node.props[prop]
+      }))
+    }).reduce((a, b) => [...a, ...b])
+  ;
+  // log('nodes', nodes);
 
   nodes.sort((a, b) => a.id.localeCompare(b.id));
 

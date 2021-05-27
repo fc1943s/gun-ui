@@ -552,7 +552,10 @@ const getRootData = (graph, valuesEnabled, search) => {
       const valueOff = 0.3;
 
       if (j === innerNodes.length - 1) {
-        const propsText = JSON.stringify(node.props, null, 4).replace(/\\/g, "");
+        const propsText = JSON
+          .stringify(node.props, null, 4)
+          .replace(/\\/g, "")
+          .replace(/,/g, ",\r\n");
 
         currObj.fullPath = node.id;
         currObj.label2 = innerNode;

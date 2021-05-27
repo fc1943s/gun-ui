@@ -4,16 +4,16 @@
   "private": true,
   "homepage": ".",
   "dependencies": {
-    "@nivo/circle-packing": "~0.70",
-    "@nivo/core": "~0.70",
+    "@nivo/circle-packing": "0.67",
+    "@nivo/core": "0.67",
     "@testing-library/jest-dom": "~5.12.0",
     "@testing-library/react": "~11.2.7",
     "@testing-library/user-event": "~13.1.9",
     "d3": "~6.7.0",
     "gun": "amark/gun.git#master",
-    "react": "~16.14.0",
+    "react": "~17.0.2",
     "react-d3-graph": "~2.6.0",
-    "react-dom": "~16.14.0",
+    "react-dom": "~17.0.2",
     "react-scripts": "~4.0.3"
   },
   "devDependencies": {

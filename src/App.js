@@ -4,9 +4,8 @@ import Gun from 'gun';
 import 'gun/sea';
 import React, { useEffect, useState } from 'react';
 
-// import Vertex from './Vertex';
-
-import { ResponsiveCirclePacking } from '@nivo/circle-packing'
+// import { ResponsiveCirclePacking } from '@nivo/circle-packing'
+import { ResponsiveBubble } from '@nivo/circle-packing'
 
 
 function log (...p) {
@@ -22,18 +21,21 @@ function log (...p) {
 const MyResponsiveBubble = ({ root /* see root tab */ }) => {
   const [zoomedId, setZoomedId] = useState(null);
   return (
-  <ResponsiveCirclePacking
-    data={root}
+  // <ResponsiveCirclePacking
+  <ResponsiveBubble
+    // data={root}
+    root={root}
     margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-    id="fullPath"
+    // id="fullPath"
+    identity="name"
     colorBy="depth"
     label={x => x.data.label}
     enableLabels={true}
     value="loc"
-    zoomedId={zoomedId}
-    onClick={node => {
-      setZoomedId(zoomedId === node.id ? null : node.id)
-    }}
+    // zoomedId={zoomedId}
+    // onClick={node => {
+    //   setZoomedId(zoomedId === node.id ? null : node.id)
+    // }}
     colors={{ scheme: 'spectral' }}
     padding={0}
     labelSkipRadius={0}
@@ -296,7 +298,7 @@ function App() {
 
   const addGunListener = React.useCallback((soul) => {
     if (!gunListeners.has(soul)) {
-      log('Added listener to node: ' + soul);
+      console.log('Added listener to node: ' + soul);
 
       let gun = getGunRoot();
       gun.get(soul).on(handleNodeChange, { change: true });

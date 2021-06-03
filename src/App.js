@@ -8,57 +8,69 @@ import React, { useEffect, useState } from 'react';
 import { ResponsiveBubble } from '@nivo/circle-packing'
 
 
-function log (...p) {
-  if(window.log) {
+function log(...p) {
+  if (window.log) {
     console.log(...p);
   }
 }
+
 // make sure parent container have a defined height when using
 // responsive component, otherwise height will be 0 and
 // no chart will be rendered.
 // website examples showcase many properties,
 // you'll often use just a few of them.
-const MyResponsiveBubble = ({ root /* see root tab */ }) => {
-  const [zoomedId, setZoomedId] = useState(null);
+const MyResponsiveBubble = React.memo(({ graph, valuesEnabled, search }) => {
+
+  // const [zoomedId, setZoomedId] = useState(null);
+  const [data, setData] = useState({});
+
+  useEffect(() => {
+    (async () => {
+      const newData = await getRootData(graph, valuesEnabled, search);
+      setData(newData)
+    })()
+  }, [graph, valuesEnabled, search])
+
   return (
-  // <ResponsiveCirclePacking
-  <ResponsiveBubble
-    // data={root}
-    root={root}
-    margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-    // id="fullPath"
-    identity="name"
-    colorBy="depth"
-    label={x => x.data.label}
-    enableLabels={true}
-    value="loc"
-    // zoomedId={zoomedId}
-    // onClick={node => {
-    //   setZoomedId(zoomedId === node.id ? null : node.id)
-    // }}
-    colors={{ scheme: 'spectral' }}
-    padding={0}
-    labelSkipRadius={0}
-    labelTextColor="black"
-    borderWidth={2}
-    borderColor={{ from: 'color' }}
-    defs={[
-      {
-        id: 'lines',
-        type: 'patternLines',
-        background: 'none',
-        color: 'inherit',
-        rotation: -75,
-        lineWidth: 5,
-        spacing: 8
-      }
-    ]}
-    fill={[{ match: { depth: 1 }, id: 'lines' }]}
-    animate={true}
-    motionStiffness={90}
-    motionDamping={12}
-  />
-)}
+    // <ResponsiveCirclePacking
+    <ResponsiveBubble
+      // data={root}
+      root={data}
+      margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+      // id="fullPath"
+      identity="name"
+      colorBy="depth"
+      label={x => x.data.label}
+      enableLabels={true}
+      value="loc"
+      // zoomedId={zoomedId}
+      // onClick={node => {
+      //   setZoomedId(zoomedId === node.id ? null : node.id)
+      // }}
+      colors={{ scheme: 'spectral' }}
+      padding={0}
+      labelSkipRadius={0}
+      labelTextColor="black"
+      borderWidth={2}
+      borderColor={{ from: 'color' }}
+      defs={[
+        {
+          id: 'lines',
+          type: 'patternLines',
+          background: 'none',
+          color: 'inherit',
+          rotation: -75,
+          lineWidth: 5,
+          spacing: 8
+        }
+      ]}
+      fill={[{ match: { depth: 1 }, id: 'lines' }]}
+      animate={true}
+      motionStiffness={90}
+      motionDamping={12}
+    />
+  )
+})
 
 
 // const gun = new Gun('http://192.168.178.64:8765/gun');
@@ -95,7 +107,7 @@ function App() {
 
   const [endpoint, setEndpoint] = useState('http://localhost:8765/gun');
 
-  const [root, setRoot] = useState('GunRecoil');
+  const [root, setRoot] = useState('');
   const [search, setSearch] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -151,7 +163,7 @@ function App() {
       `Peers set to: ${
         Object.keys(gun._.opt.peers).length > 0
           ? Object.keys(gun._.opt.peers).reduce(
-          (a, b) => a + ', ' + b
+            (a, b) => a + ', ' + b
           )
           : 'No peers connected'
       }`
@@ -314,7 +326,7 @@ function App() {
   const getDataFromGun = React.useCallback((path, parentId) => {
     return new Promise(async (resolve, _reject) => {
       let graph = { vertices: [], edges: [] };
-      const gun = getGunRoot();
+      // const gun = getGunRoot();
       const node = await getPath(path);
       log("node", node);
 
@@ -379,7 +391,7 @@ function App() {
         node.once(process);
       }
     });
-  }, [getPath, addGunListener, getGunRoot]);
+  }, [getPath, addGunListener]);
 
   const insertDataFromGun = React.useCallback(async (path, parentId) => {
     resetGraph();
@@ -436,7 +448,7 @@ function App() {
   window.graph = graph;
 
   return (
-    <div className="App" style={{ 'padding-top': '600px' }}>
+    <div className="App" style={{ paddingTop: '600px' }}>
       <label>Endpoint </label>
       <input
         value={endpoint}
@@ -450,14 +462,6 @@ function App() {
         value={root}
         onChange={(ev) => {
           setRoot(ev.target.value);
-        }}
-        type="text"
-      />
-      <label>Search </label>
-      <input
-        value={search}
-        onChange={(ev) => {
-          setSearch(ev.target.value);
         }}
         type="text"
       />
@@ -477,6 +481,14 @@ function App() {
         }}
         type="password"
       />
+      <label>Search </label>
+      <input
+        value={search}
+        onChange={(ev) => {
+          setSearch(ev.target.value);
+        }}
+        type="text"
+      />
       <br />
       <button onClick={() => insertDataFromGun([root], null)}>
         Load Data from Gun
@@ -486,7 +498,7 @@ function App() {
       <button onClick={() => toggleValues()}>Toggle Values</button>
 
       <div style={{ height: "1100px", color: "black" }}>
-        <MyResponsiveBubble root={getRootData(graph, valuesEnabled, search)} />
+        <MyResponsiveBubble graph={graph} valuesEnabled={valuesEnabled} search={search} />
       </div>
 
       {/*<div style={windowStyle}>*/}
@@ -499,7 +511,34 @@ function App() {
   );
 }
 
-const getRootData = (graph, valuesEnabled, search) => {
+const cache = new Map();
+
+const stringify=(obj) => {
+  return JSON
+    .stringify(obj, null, 4)
+    .replace(/\\/g, "")
+    .replace(/,/g, ",\r\n")
+    .replace("\r\n\r\n", "\r\n");
+}
+
+const decodeNode = async (node) => {
+  const propsJson = stringify(node.props);
+
+  let decrypted;
+  if(cache.has(propsJson)) {
+    decrypted = cache.get(propsJson);
+  } else {
+    const keys = node.props && window.gun ? window.gun.user()._.sea : null;
+    const verified = keys ? await window.SEA.verify(node.props, keys.pub) : null;
+    decrypted = keys ? await window.SEA.decrypt(verified, keys) : null;
+    decrypted = decrypted != null ? stringify(decrypted) : propsJson;
+    cache.set(propsJson, decrypted);
+  }
+
+  return decrypted;
+};
+
+const getRootData = async (graph, valuesEnabled, search) => {
   const newGraph = {
     "name": "root",
     label: 'root',
@@ -552,19 +591,17 @@ const getRootData = (graph, valuesEnabled, search) => {
       const valueOff = 0.3;
 
       if (j === innerNodes.length - 1) {
-        const propsText = JSON
-          .stringify(node.props, null, 4)
-          .replace(/\\/g, "")
-          .replace(/,/g, ",\r\n");
+        const nodeValue = await decodeNode(node);
+        currObj.name = `random:${Math.random()}\r\n\r\n${node.id}\r\n${nodeValue}`;
 
         currObj.fullPath = node.id;
         currObj.label2 = innerNode;
-        currObj.name = `${node.id}\r\n\r\n${propsText}`;
         // currObj.name = {a:1,b:2};
-        currObj.label = !valuesEnabled ? `${innerNode}${("/" + innerNodes[j - 1])}` : currObj.name;
+        currObj.label = !valuesEnabled ? `${innerNode}${("/" + innerNodes[j - 1])}` : `${innerNode} ${nodeValue}`;
         currObj.label = search === '' ? currObj.label : (currObj.name.indexOf(search) >= 0 ? currObj.label : '');
         // currObj.color = `hsl(${Math.round(255 * Math.random())}, 70%, 50%)`;
         currObj.loc = Object.keys(node.props || {}).length > 0 ? valueOn : valueOff;
+
         // currObj.children = currObj.loc === valueOff ? [] : Object.keys(node.props).map((key) => ({
         //     fullPath: node.id + "key",
         //     name: key,
@@ -577,7 +614,7 @@ const getRootData = (graph, valuesEnabled, search) => {
             {
               fullPath: node.id,
               name: innerNode,
-              label: innerNode,
+              label: search === '' ? innerNode : (innerNode.indexOf(search) >= 0 ? innerNode : ''),
               loc: valueOff
             }
           ]
